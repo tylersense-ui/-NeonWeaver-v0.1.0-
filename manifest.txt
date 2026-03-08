@@ -1,0 +1,9 @@
+/bin/scanner.js
+/core/manager.js
+/lib/network.js
+/util/log-utils.js
+/util/clean-root.js
+/state/world-state.json
+/state/progress-state.json
+/state/telemetry-state.json
+/state/strategy-state.json
