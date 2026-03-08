@@ -1,10 +1,9 @@
 /** @param {NS} ns */
 export async function main(ns) {
     ns.disableLog("ALL");
-    ns.tail();
-    ns.print("\x1b[38;5;196m[☠️] Lancement du protocole d'Infection NeonWeaver...\x1b[0m");
+    ns.ui.openTail(); // Correction API
+    ns.print("\x1b[38;5;196m[☠️] Lancement du protocole d'Infection NeonWeaver v0.3.1...\x1b[0m");
 
-    // Scanner récursif pour trouver tous les serveurs du jeu
     const getNetworkNodes = () => {
         const visited = new Set();
         const stack = ["home"];
@@ -23,49 +22,40 @@ export async function main(ns) {
 
     const servers = getNetworkNodes();
     const payload = "/bin/worker.js";
-    const target = "n00dles"; // Cible universelle pour commencer à faire du cash
-    let rootedCount = 0;
+    const target = "n00dles"; 
     let totalThreads = 0;
 
     for (const server of servers) {
-        if (server === "home") continue; // On ne veut pas s'auto-nuke ni saturer notre RAM pour l'instant
-
+        // Crack & Nuke
         let portsRequired = ns.getServerNumPortsRequired(server);
         let portsOpened = 0;
-
-        // Exploits
         if (ns.fileExists("BruteSSH.exe", "home")) { ns.brutessh(server); portsOpened++; }
         if (ns.fileExists("FTPCrack.exe", "home")) { ns.ftpcrack(server); portsOpened++; }
-        if (ns.fileExists("relaySMTP.exe", "home")) { ns.relaysmtp(server); portsOpened++; }
-        if (ns.fileExists("HTTPWorm.exe", "home")) { ns.httpworm(server); portsOpened++; }
-        if (ns.fileExists("SQLInject.exe", "home")) { ns.sqlinject(server); portsOpened++; }
-
-        // Root
+        
         if (portsOpened >= portsRequired && !ns.hasRootAccess(server)) {
             ns.nuke(server);
-            ns.print(`\x1b[38;5;118m[ROOT] Système compromis : ${server}\x1b[0m`);
-            rootedCount++;
         }
 
         // Déploiement
         if (ns.hasRootAccess(server)) {
-            await ns.scp(payload, server, "home");
+            const isHome = (server === "home");
+            const reservedRam = isHome ? 32 : 0; // On garde 32GB sur home pour nos scripts
+            const maxRam = ns.getServerMaxRam(server);
+            const usedRam = ns.getServerUsedRam(server);
+            const availableRam = maxRam - (isHome ? Math.max(usedRam, reservedRam) : usedRam);
             
-            // Calcul de la RAM max pour bourrer de threads
-            const ramAvailable = ns.getServerMaxRam(server) - ns.getServerUsedRam(server);
-            const scriptRam = ns.getScriptRam(payload);
-            const threads = Math.floor(ramAvailable / scriptRam);
+            const threads = Math.floor(availableRam / ns.getScriptRam(payload));
             
             if (threads > 0) {
-                ns.killall(server); // Reset des anciens scripts éventuels
+                if (!isHome) {
+                    await ns.scp(payload, server, "home");
+                    ns.killall(server);
+                }
                 ns.exec(payload, server, threads, target);
-                ns.print(`\x1b[38;5;51m[EXEC] Botnet déployé : ${threads} threads sur ${server} (Cible: ${target})\x1b[0m`);
+                ns.print(`\x1b[38;5;51m[EXEC] ${server} : ${threads} threads sur ${target}`);
                 totalThreads += threads;
             }
         }
     }
-    
-    ns.print(`\x1b[38;5;220m--- BILAN DE L'OPÉRATION ---`);
-    ns.print(`Nouveaux serveurs rootés : ${rootedCount}`);
-    ns.print(`Puissance de frappe déployée : ${totalThreads} threads sur ${target}\x1b[0m`);
+    ns.print(`\x1b[38;5;220mPuissance totale : ${totalThreads} threads.`);
 }
