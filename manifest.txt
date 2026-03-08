@@ -1,4 +1,6 @@
 /bin/scanner.js
+/bin/infect.js
+/bin/worker.js
 /core/manager.js
 /lib/network.js
 /util/log-utils.js
