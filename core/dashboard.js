@@ -19,8 +19,8 @@ export async function main(ns) {
         
         // --- HEADER ---
         ns.print(`\x1b[38;5;51m╔══════════════════════════════════════════════════════╗`);
-        ns.print(`║ \x1b[38;5;208m[Lv.${ns.getHackingLevel()}]\x1b[38;5;51m   NEONWEAVER OVERSEER v0.6.0   \x1b[38;5;244m${now.toLocaleTimeString()}\x1b[38;5;51m ║`);
-        ns.print(`║ \x1b[38;5;13mBN: ${ns.getResetInfo().currentNode}\x1b[38;5;51m                                     \x1b[38;5;13mRT:${ns.formatNumber(ns.getResetInfo().lastAugReset, 0)}ms\x1b[38;5;51m ║`);
+        ns.print(`║ \x1b[38;5;208m[Lv.${ns.getHackingLevel()}]\x1b[38;5;51m   NEONWEAVER OVERSEER v0.6.0       \x1b[38;5;244m${now.toLocaleTimeString()}\x1b[38;5;51m ║`);
+        ns.print(`║ \x1b[38;5;13mBN: ${ns.getResetInfo().currentNode}\x1b[38;5;51m                                        \x1b[38;5;13mRT:${ns.formatNumber(ns.getResetInfo().lastAugReset, 0)}ms\x1b[38;5;51m ║`);
         ns.print(`╚══════════════════════════════════════════════════════╝\x1b[0m`);
 
         // --- ECONOMIE ---
