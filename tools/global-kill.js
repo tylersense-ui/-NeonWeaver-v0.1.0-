@@ -15,7 +15,7 @@ export async function main(ns) {
         if (server === "home") {
             // Sur Home, on ne tue que les processus qui ne sont pas ce script ou le dashboard
             ns.ps().forEach(proc => {
-                if (proc.filename !== "/util/global-kill.js" && proc.filename !== "/core/dashboard.js" && proc.filename !== "neonweaver-update.js") {
+                if (proc.filename !== "/tools/global-kill.js" && proc.filename !== "/core/dashboard.js" && proc.filename !== "neonweaver-update.js") {
                     ns.kill(proc.pid);
                 }
             });
