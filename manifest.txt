@@ -2,6 +2,9 @@
 /bin/scanner.js
 /bin/infect.js
 /bin/p-serv.js
+/bin/h.js
+/bin/g.js
+/bin/w.js
 /core/dashboard.js
 /core/spooler.js
 /lib/formulas.js
