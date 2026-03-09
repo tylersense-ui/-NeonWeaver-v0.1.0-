@@ -6,6 +6,6 @@
 /wk/g.js
 /wk/w.js
 /ui/dashboard.js
-/sys/lib-batch.js
+/lib/lib-batch.js
 /core/orchestrator.js
 manifest.txt
