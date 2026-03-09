@@ -3,23 +3,38 @@ export async function main(ns) {
     ns.disableLog("ALL");
     ns.ui.openTail();
     
-    const ram = 8; // On commence petit (8GB)
-    const prefix = "pserv-";
-    const target = "n00dles";
+    // Noms Cyberpunk pour le style (demandé par l'opérateur)
+    const coolNames = ["Wintermute", "Neuromancer", "Shodan", "Glados", "Hal9000", "Nexus", "Matrix", "Zion", "Skynet", "Cortana", "Legion", "Oracle", "Motoko", "Tachikoma", "Batty", "Deckard", "Tyrell", "Ono-Sendai", "Black-ICE", "Daedalus", "Icarus", "Gibson", "Avalon", "Yggdrasil", "Midgard"];
+    
+    let currentRam = 8; // La RAM de tes serveurs actuels
+    const targetRam = 64; // On vise 64GB pour la prochaine upgrade
 
-    ns.print(`\x1b[38;5;208m[🖥️] Gestionnaire de serveurs personnels activé...`);
+    ns.print(`\x1b[38;5;208m[🖥️] Gestionnaire de serveurs personnels (Mode Upgrade) activé...`);
 
-    while (ns.getPurchasedServers().length < ns.getPurchasedServerLimit()) {
-        if (ns.getServerMoneyAvailable("home") > ns.getPurchasedServerCost(ram)) {
-            let hostname = ns.purchaseServer(prefix + ns.getPurchasedServers().length, ram);
-            ns.print(`\x1b[38;5;118m[+] Serveur acheté : ${hostname}`);
-            
-            // On déploie immédiatement le worker
-            await ns.scp("/bin/worker.js", hostname);
-            let threads = Math.floor(ram / ns.getScriptRam("/bin/worker.js"));
-            ns.exec("/bin/worker.js", hostname, threads, target);
+    while (true) {
+        let servers = ns.getPurchasedServers();
+        
+        // 1. Upgrade des serveurs existants
+        for (let i = 0; i < servers.length; i++) {
+            const serv = servers[i];
+            if (ns.getServerMaxRam(serv) < targetRam) {
+                const cost = ns.getPurchasedServerUpgradeCost(serv, targetRam);
+                if (ns.getServerMoneyAvailable("home") > cost) {
+                    ns.upgradePurchasedServer(serv, targetRam);
+                    ns.print(`\x1b[38;5;51m[💽] Serveur ${serv} upgradé à ${targetRam}GB !`);
+                }
+            }
         }
-        await ns.sleep(10000); // On vérifie toutes les 10 sec
+
+        // 2. Achat de nouveaux serveurs avec des noms cool s'il reste de la place (si on augmente la limite ou pour les prochaines runs)
+        if (servers.length < ns.getPurchasedServerLimit()) {
+            if (ns.getServerMoneyAvailable("home") > ns.getPurchasedServerCost(targetRam)) {
+                let name = coolNames[servers.length] || `Node-${servers.length}`;
+                let hostname = ns.purchaseServer(name, targetRam);
+                ns.print(`\x1b[38;5;118m[+] Nouveau serveur acheté : ${hostname} (${targetRam}GB)`);
+            }
+        }
+
+        await ns.sleep(10000); // Check toutes les 10 sec
     }
-    ns.print("\x1b[38;5;118m[✔️] Limite de serveurs atteinte.");
 }
