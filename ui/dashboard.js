@@ -1,8 +1,8 @@
 /**
  * @module  Dashboard
  * @author  BitCodeBurnerGamer
- * @version 1.0.1
- * @desc    Interface de contrôle visuelle haute fidélité.
+ * @version 1.0.3
+ * @desc    Interface avec Barre de Charge Réseau Globale.
  */
 export async function main(ns) {
     ns.disableLog("ALL");
@@ -19,19 +19,21 @@ export async function main(ns) {
         if (income > record) record = income;
 
         ns.print(`\x1b[38;5;51m╔══════════════════════════════════════════════════════╗`);
-        ns.print(`║ \x1b[38;5;208m[Lv.${ns.getHackingLevel()}]\x1b[38;5;255m  NEONWEAVER v1.0.1  \x1b[38;5;244mUP: ${ns.tFormat(uptime, true)}\x1b[38;5;51m ║`);
+        ns.print(`║ \x1b[38;5;208m[Lv.${ns.getHackingLevel()}]\x1b[38;5;255m  NEONWEAVER v1.0.3  \x1b[38;5;244mUP: ${ns.tFormat(uptime, true)}\x1b[38;5;51m ║`);
         ns.print(`╚══════════════════════════════════════════════════════╝\x1b[0m`);
 
         history.shift(); history.push(income);
         const maxH = Math.max(...history) || 1;
         const minH = Math.min(...history);
         const range = maxH - minH || 1;
-        const spark = history.map(v => `\x1b[38;5;${Math.floor(((v - minH) / range) * 7) + 39}m${sparklines[Math.floor(((v - minH) / range) * 7)]}\x1b[0m`).join("");
+        const spark = history.map(v => {
+            const idx = Math.floor(((v - minH) / range) * 7);
+            return `\x1b[38;5;${idx + 39}m${sparklines[idx]}\x1b[0m`;
+        }).join("");
 
         ns.print(` \x1b[38;5;121m💰 $${ns.formatNumber(income)}/s \x1b[38;5;220m[REC: $${ns.formatNumber(record)}]\x1b[0m`);
         ns.print(` \x1b[38;5;244m📈 [${spark}]\x1b[0m`);
 
-        // --- CIBLE & SPOOLER (RESTAURÉ) ---
         if (ns.fileExists("/db/telemetry-state.json")) {
             const state = JSON.parse(ns.read("/db/telemetry-state.json"));
             const t = state.target;
@@ -45,8 +47,22 @@ export async function main(ns) {
             ns.print(` \x1b[38;5;51m⚡ STATUS: ${state.action}\x1b[0m`);
         }
 
+        // --- RAM SECTION ---
         const hUsed = ns.getServerUsedRam("home"), hMax = ns.getServerMaxRam("home");
         ns.print(`\n \x1b[38;5;51m🏠 HOME RAM \x1b[0m [${"█".repeat(Math.round((hUsed/hMax)*10))}${"░".repeat(10-Math.round((hUsed/hMax)*10))}] ${((hUsed/hMax)*100).toFixed(1)}%`);
+
+        // Scan du réseau pour la barre globale
+        let netUsed = 0, netMax = 0;
+        let pservs = ns.getPurchasedServers();
+        pservs.forEach(s => {
+            netMax += ns.getServerMaxRam(s);
+            netUsed += ns.getServerUsedRam(s);
+        });
+
+        const nPct = (netUsed / netMax) || 0;
+        const nColor = nPct > 0.9 ? "\x1b[38;5;196m" : (nPct > 0.5 ? "\x1b[38;5;220m" : "\x1b[38;5;118m");
+        ns.print(` \x1b[38;5;51m🌐 NETW RAM \x1b[0m ${nColor}[${"█".repeat(Math.round(nPct*10))}${"░".repeat(10-Math.round(nPct*10))}] ${(nPct*100).toFixed(1)}%\x1b[0m`);
+        ns.print(` \x1b[38;5;244m   (Usage: ${ns.formatRam(netUsed)} / ${ns.formatRam(netMax)})\x1b[0m`);
 
         await ns.sleep(1000);
     }
