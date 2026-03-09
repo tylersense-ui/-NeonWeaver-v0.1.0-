@@ -1,11 +1,11 @@
+/util/global-kill.js
 /bin/scanner.js
 /bin/infect.js
-/bin/worker.js
 /bin/p-serv.js
 /core/dashboard.js
+/core/spooler.js
+/lib/formulas.js
 /util/clean-root.js
 /state/world-state.json
 /state/progress-state.json
-/state/telemetry-state.json
-/state/strategy-state.json
 manifest.txt
