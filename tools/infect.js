@@ -1,7 +1,17 @@
-/** @param {NS} ns */
+/**
+ * @module  Infector
+ * @author  BitCodeBurnerGamer
+ * @version 1.1.1
+ * @desc    Outil de nuke automatisé. Peut être importé ou run en standalone.
+ */
 export async function main(ns) {
-    const programs = ["BruteSSH.exe", "FTPCrack.exe", "relaySMTP.exe", "HTTPWorm.exe", "SQLInject.exe"];
-    
+    while(true) {
+        autoNuke(ns);
+        await ns.sleep(60000); // Check toutes les minutes si lancé seul
+    }
+}
+
+export function autoNuke(ns) {
     const scanAll = () => {
         let s = ["home"], v = new Set();
         while(s.length > 0) {
@@ -14,28 +24,21 @@ export async function main(ns) {
         return Array.from(v);
     };
 
-    while (true) {
-        const targets = scanAll();
-        let count = 0;
+    let count = 0;
+    for (const host of scanAll()) {
+        if (host === "home" || ns.hasRootAccess(host)) continue;
 
-        for (const host of targets) {
-            if (host === "home" || ns.hasRootAccess(host)) continue;
+        let openPorts = 0;
+        if (ns.fileExists("BruteSSH.exe", "home")) { ns.brutessh(host); openPorts++; }
+        if (ns.fileExists("FTPCrack.exe", "home")) { ns.ftpcrack(host); openPorts++; }
+        if (ns.fileExists("relaySMTP.exe", "home")) { ns.relaysmtp(host); openPorts++; }
+        if (ns.fileExists("HTTPWorm.exe", "home")) { ns.httpworm(host); openPorts++; }
+        if (ns.fileExists("SQLInject.exe", "home")) { ns.sqlinject(host); openPorts++; }
 
-            let openPorts = 0;
-            if (ns.fileExists("BruteSSH.exe")) { ns.brutessh(host); openPorts++; }
-            if (ns.fileExists("FTPCrack.exe")) { ns.ftpcrack(host); openPorts++; }
-            if (ns.fileExists("relaySMTP.exe")) { ns.relaysmtp(host); openPorts++; }
-            if (ns.fileExists("HTTPWorm.exe")) { ns.httpworm(host); openPorts++; }
-            if (ns.fileExists("SQLInject.exe")) { ns.sqlinject(host); openPorts++; }
-
-            if (ns.getServerNumPortsRequired(host) <= openPorts) {
-                ns.nuke(host);
-                ns.print(`[+] ROOT acquis sur ${host}`);
-                count++;
-            }
+        if (ns.getServerNumPortsRequired(host) <= openPorts) {
+            ns.nuke(host);
+            count++;
         }
-        
-        if (count > 0) ns.toast(`${count} nouveaux serveurs rootés !`, "success");
-        await ns.sleep(10000); // Boucle de surveillance toutes les 10s
     }
+    if (count > 0) ns.toast(`[Infector] ${count} nouveaux serveurs rootés !`, "success");
 }

@@ -1,10 +1,11 @@
 /**
  * @module  Orchestrator-HWGW
  * @author  BitCodeBurnerGamer
- * @version 1.0.3
- * @desc    Batcher agressif. Remplit tout le réseau de vagues HWGW.
+ * @version 1.1.0
+ * @desc    Batcher distribué. Traite le réseau comme un pool unifié de RAM.
  */
 import { getBatchTimings } from "/lib/lib-batch.js";
+import { autoNuke } from "/tools/infect.js";
 
 export async function main(ns) {
     ns.disableLog("ALL");
@@ -14,7 +15,12 @@ export async function main(ns) {
     const spacer = 50; 
     let batchId = 0;
 
+    ns.print(`\x1b[38;5;13m[🛰️] NeonWeaver Orchestrator HWGW v1.1.0 en ligne...\x1b[0m`);
+
     while (true) {
+        // 1. Auto-Infect à chaque cycle pour choper les nouveaux serveurs
+        autoNuke(ns);
+
         const srv = ns.getServer(target);
         const player = ns.getPlayer();
 
@@ -25,7 +31,7 @@ export async function main(ns) {
             const servers = getServers(ns);
             for (const host of servers) {
                 let free = ns.getServerMaxRam(host) - ns.getServerUsedRam(host);
-                if (host === "home") free -= 64;
+                if (host === "home") free -= 128;
                 if (free < 2) continue;
 
                 if (host !== "home") ns.scp(["/wk/w.js", "/wk/g.js"], host, "home");
@@ -40,43 +46,56 @@ export async function main(ns) {
             continue;
         }
 
-        // --- PHASE 2 : BATCHING MASSIF ---
-        ns.write("/db/telemetry-state.json", JSON.stringify({target, action: "\x1b[38;5;118mHWGW OVERKILL\x1b[0m"}), "w");
+        // --- PHASE 2 : BATCHING DISTRIBUÉ ---
+        ns.write("/db/telemetry-state.json", JSON.stringify({target, action: "\x1b[38;5;118mHWGW BATCHING\x1b[0m"}), "w");
         
         const t = getBatchTimings(ns, target);
-        const servers = getServers(ns);
-        let batchDeployedThisLoop = false;
+        
+        // Délais calculés
+        const hD = t.wTime - t.hTime;
+        const w1D = spacer;
+        const gD = t.wTime + (spacer * 2) - t.gTime;
+        const w2D = spacer * 3;
 
-        for (const host of servers) {
-            let free = ns.getServerMaxRam(host) - ns.getServerUsedRam(host);
-            if (host === "home") free -= 128;
+        // Les 4 jobs du batch
+        const jobs = [
+            { script: "/wk/h.js", threads: t.hThreads, delay: hD, id: "-h" },
+            { script: "/wk/w.js", threads: t.w1Threads, delay: w1D, id: "-w1" },
+            { script: "/wk/g.js", threads: t.gThreads, delay: gD, id: "-g" },
+            { script: "/wk/w.js", threads: t.w2Threads, delay: w2D, id: "-w2" }
+        ];
 
-            const batchRam = (t.hThreads*1.7) + (t.w1Threads*1.75) + (t.gThreads*1.75) + (t.w2Threads*1.75);
+        let servers = getServers(ns);
+        let batchDeployed = true;
 
-            // On remplit ce serveur au maximum de sa capacité de batchs
-            while (free >= batchRam) {
-                if (host !== "home") ns.scp(["/wk/h.js", "/wk/g.js", "/wk/w.js"], host, "home");
-                
-                const hD = t.wTime - t.hTime;
-                const w1D = spacer;
-                const gD = t.wTime + (spacer * 2) - t.gTime;
-                const w2D = spacer * 3;
+        // On essaie de placer chaque job indépendamment sur le réseau
+        for (const job of jobs) {
+            let placed = false;
+            let ramNeeded = job.threads * ns.getScriptRam(job.script);
 
-                ns.exec("/wk/h.js", host, t.hThreads, target, hD, batchId + "-h");
-                ns.exec("/wk/w.js", host, t.w1Threads, target, w1D, batchId + "-w1");
-                ns.exec("/wk/g.js", host, t.gThreads, target, gD, batchId + "-g");
-                ns.exec("/wk/w.js", host, t.w2Threads, target, w2D, batchId + "-w2");
-                
-                batchId++;
-                free -= batchRam;
-                batchDeployedThisLoop = true;
-                // On espace les lancements pour ne pas lagger le jeu
-                await ns.sleep(spacer); 
+            for (const host of servers) {
+                let free = ns.getServerMaxRam(host) - ns.getServerUsedRam(host);
+                if (host === "home") free -= 128; // Marge Home
+
+                if (free >= ramNeeded) {
+                    if (host !== "home") ns.scp(job.script, host, "home");
+                    ns.exec(job.script, host, job.threads, target, job.delay, batchId + job.id);
+                    placed = true;
+                    break; // Job placé, on passe au job suivant
+                }
+            }
+            if (!placed) {
+                batchDeployed = false; // Pas assez de RAM pour ce job
+                break; // On annule le reste du batch
             }
         }
 
-        if (!batchDeployedThisLoop) {
-            await ns.sleep(1000); // Réseau plein, on attend.
+        if (batchDeployed) {
+            batchId++;
+            await ns.sleep(spacer); // On espace la frappe
+        } else {
+            // Si on ne peut pas placer un job, c'est que le réseau est plein à 100%
+            await ns.sleep(1000); 
         }
     }
 }
@@ -89,9 +108,10 @@ function getServers(ns) {
         let node = stack.pop();
         if (!visited[node]) {
             visited[node] = true;
-            if (ns.hasRootAccess(node)) res.push(node);
+            if (ns.hasRootAccess(node) && ns.getServerMaxRam(node) > 0) res.push(node); // Filtre anti-zombies
             ns.scan(node).forEach(s => stack.push(s));
         }
     }
-    return res;
+    // Tri optionnel : On met Home en dernier pour remplir les pservs d'abord
+    return res.sort((a, b) => (a === "home" ? 1 : b === "home" ? -1 : 0));
 }
