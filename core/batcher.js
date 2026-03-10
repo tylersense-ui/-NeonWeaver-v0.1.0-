@@ -32,17 +32,14 @@ export class Batcher {
             const secReady = secDiff <= 5;
             const moneyReady = moneyPercent >= 0.95;
             
-            // PHASE 1 : WEAKEN
             if (!secReady) {
                 return this.dispatchWeaken(target);
             }
             
-            // PHASE 2 : GROW
             if (!moneyReady) {
                 return this.dispatchGrowPrep(target);
             }
             
-            // PHASE 3 : HWGW (OPTIMISÉ FORMULAS)
             return this.dispatchHWGW(target);
             
         } catch (error) {
@@ -162,15 +159,8 @@ export class Batcher {
         };
     }
     
-    /**
-     * HWGW OPTIMISÉ AVEC FORMULAS
-     */
     dispatchHWGW(target) {
         const hackPercent = CONFIG.BATCHER.DEFAULT_HACK_PERCENT;
-        
-        // ════════════════════════════════════════════════════
-        // CALCULS AVEC FORMULAS
-        // ════════════════════════════════════════════════════
         
         const hackThreads = this.formulas.calculateHackThreads(target, hackPercent);
         
@@ -189,14 +179,9 @@ export class Batcher {
         const timings = this.formulas.calculateTimings(target, CONFIG.HACKING.TIME_BUFFER_MS);
         const hackChance = this.formulas.getHackChance(target);
         
-        // ════════════════════════════════════════════════════
-        // DISPATCH AVEC TIMINGS PRÉCIS
-        // ════════════════════════════════════════════════════
-        
         let jobsSent = 0;
         let totalAllocated = 0;
         
-        // HACK
         if (hackThreads > 0) {
             const hAlloc = this.ramMgr.allocateThreads(hackThreads);
             if (hAlloc.allocations.length > 0) {
@@ -216,7 +201,6 @@ export class Batcher {
             }
         }
         
-        // WEAKEN1
         if (w1Threads > 0) {
             const w1Alloc = this.ramMgr.allocateThreads(w1Threads);
             if (w1Alloc.allocations.length > 0) {
@@ -236,7 +220,6 @@ export class Batcher {
             }
         }
         
-        // GROW
         if (growThreads > 0) {
             const gAlloc = this.ramMgr.allocateThreads(growThreads);
             if (gAlloc.allocations.length > 0) {
@@ -256,7 +239,6 @@ export class Batcher {
             }
         }
         
-        // WEAKEN2
         if (w2Threads > 0) {
             const w2Alloc = this.ramMgr.allocateThreads(w2Threads);
             if (w2Alloc.allocations.length > 0) {
